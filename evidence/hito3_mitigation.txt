@@ -1,0 +1,14 @@
+=== HITO 3: MITIGACIÓN TEMPORAL ===
+Fecha: Sun May 17 03:08:00 UTC 2026
+Hostname: copy-fail-jeaguilarg007-lang
+Descripción: Se intentó deshabilitar el módulo `algif_aead` como mitigación.
+algif_aead en lsmod: (módulo NO cargado - mitigación activa)
+
+Intento de exploit post-mitigación:
+python3 copy_fail_exp.py 2>&1 | head -10
+Result: (exploit falló como se esperaba) - FileNotFoundError / AF_ALG no disponible
+
+Nota: En esta VM la interfaz AF_ALG no estaba disponible o los módulos faltaban,
+por lo que el exploit no pudo ejecutarse correctamente; la mitigación prevista
+(escribir "install algif_aead /bin/false" en /etc/modprobe.d) neutraliza la carga
+si el módulo estuviera presente.
