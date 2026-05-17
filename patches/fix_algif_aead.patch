@@ -1,0 +1,25 @@
+diff --git a/crypto/algif_aead.c b/crypto/algif_aead.c
+index 7d58cbbce..745495f30 100644
+--- a/crypto/algif_aead.c
++++ b/crypto/algif_aead.c
+@@ -279,10 +279,16 @@ static int _aead_recvmsg(struct socket *sock, struct msghdr *msg,
+ 	}
+ 
+ 	/* Initialize the crypto operation */
+-	aead_request_set_crypt(&areq->cra_u.aead_req, rsgl_src,
+-			       areq->first_rsgl.sgl.sgt.sgl, used, ctx->iv);
+-	aead_request_set_ad(&areq->cra_u.aead_req, ctx->aead_assoclen);
+-	aead_request_set_tfm(&areq->cra_u.aead_req, tfm);
+++	/*
+++	 * Fix CVE-2026-31431: use separate source and destination SGLs for
+++	 * decryption so TX page cache data is never used as the destination
+++	 * buffer for the crypto request.
+++	 */
+++	aead_request_set_crypt(&areq->cra_u.aead_req,
+++			       ctx->enc ? rsgl_src : tsgl_src,
+++			       areq->first_rsgl.sgl.sgt.sgl, used, ctx->iv);
+++	aead_request_set_ad(&areq->cra_u.aead_req, ctx->aead_assoclen);
+++	aead_request_set_tfm(&areq->cra_u.aead_req, tfm);
+ 
+ 	if (msg->msg_iocb && !is_sync_kiocb(msg->msg_iocb)) {
+ 		/* AIO operation */
