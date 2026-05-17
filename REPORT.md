@@ -1,52 +1,48 @@
 REPORT: CVE-2026-31431 — Copy Fail
 
-Resumen técnico (en mis propias palabras):
+Technical summary (in my own words):
 
-CVE-2026-31431, conocido como "Copy Fail", es un fallo lógico en el subsistema
-criptográfico del kernel Linux que permitía escribir datos controlados en páginas
-que pertenecen al page cache de archivos setuid, sin modificar el archivo en disco.
-El origen del problema fue una optimización de 2017 en `crypto/algif_aead.c`
-que trataba de realizar operaciones AEAD in-place para mejorar rendimiento. Para
-lograrlo, el código reusaba la misma scatterlist para `src` y `dst` en la
-petición de cifrado/descifrado (`req->src = req->dst`). Esto provocó que, cuando
-las páginas de entrada provenían de `splice()` (page cache), el kernel pudiera
-usar páginas del page cache como destino de escritura para la operación
-críptica.
+CVE-2026-31431, also called "Copy Fail," is a logic bug in the Linux kernel
+cryptography subsystem. It allowed an attacker to write controlled data into
+pages that belong to the page cache of a setuid file, without changing the file
+on disk.
 
-El error concreto es peligroso porque la operación de autenticación y
-descifrado escribe más allá de la región legítima de salida (por ejemplo,
-`dst[assoclen + cryptlen]`), y si `dst` comparte páginas con el page cache
-(un escenario posible con `splice()`), esas páginas corresponden a otros
-ficheros en el sistema. El exploit aprovecha esto para plantar 4 bytes
-controlados en la memoria que más tarde surten efecto al ejecutar un binario
-setuid (como `/usr/bin/su`), obteniendo código o privilegios elevados sin
-modificar el inodo ni el contenido persistido del archivo — de ahí su
-'stealthiness'.
+The root cause was a 2017 optimization in `crypto/algif_aead.c` that tried to
+perform AEAD operations in-place for better performance. To do this, the code
+reused the same scatterlist for both `src` and `dst` in the cipher request
+(`req->src = req->dst`). That meant, when input pages came from `splice()` and
+and lived in the page cache, the kernel could end up using page cache pages as
+the destination buffer for the crypto operation.
 
-Conexión con conceptos del curso:
-- Page cache: el bug explota el hecho de que el page cache almacena páginas
-  que representan contenido de ficheros y que, en ciertos flujos, esas páginas
-  pueden ser referenciadas por operaciones de E/S (como `splice()`).
-- setuid: binarios setuid (como `su`) cargan en memoria y su comportamiento
-  depende del contenido en memoria; corromper su imagen en memoria puede dar
-  privilegios sin tocar el disco.
-- Inodos y permisos: aunque el exploit no cambia el inodo ni el contenido en
-  disco, invade la integridad del proceso al alterar la imagen cargada en
-  memoria.
+This is dangerous because the authentication/decryption step writes beyond the
+expected output region (for example, `dst[assoclen + cryptlen]`). If `dst`
+shares pages with page cache memory, those writes can corrupt memory used by
+other files. The exploit takes advantage of this by planting 4 bytes in the
+page cache that later affect the behavior of a loaded setuid binary like
+`/usr/bin/su`. That gives root without ever modifying the file’s inode or
+persisted disk content — which is why the attack is stealthy.
 
-Lecciones aprendidas:
-- Cambios puntuales por rendimiento (optimización in-place) pueden introducir
-  vectores de corrupción cuando se asumen invariantes que no se mantienen en
-  todas las rutas de E/S (p. ej. `splice()` y page cache).
-- El análisis de seguridad debe revisar no solo el código lógico, sino las
-  interacciones con subsistemas (p. ej. VM/page cache, sockets AF_ALG,
-  llamadas splice) y modelos de memoria.
-- Las mitigaciones temporales (deshabilitar módulos) son útiles para reducir
-  riesgo mientras se desarrolla un parche permanente.
+Course concepts connections:
+- Page cache: the bug depends on the page cache holding file data in memory,
+  and on `splice()` causing those pages to be reused in kernel crypto paths.
+- setuid: a setuid binary like `su` can be abused if its in-memory image is
+  corrupted, even though the file on disk looks normal.
+- Inodes and permissions: the exploit does not need to change the inode or file
+  permissions; it works by changing the loaded memory image instead.
 
-¿Qué hice en este ejercicio?
-- Preparé la VM vulnerable, intenté el PoC público y documenté la salida.
-- Apliqué y verifiqué el parche en `crypto/algif_aead.c`, recompilé el kernel
-  y generé la evidencia correspondiente.
+Lessons learned:
+- Performance optimizations can create security bugs if they assume the same
+  invariants hold in every I/O path. In this case, in-place crypto broke when
+  the input came from page cache pages.
+- Security review must consider subsystem interactions, not just the single
+  function being changed. Here, the bug is about how AF_ALG, `splice()`, and the
+  page cache work together.
+- Temporary mitigations like disabling a vulnerable module are useful while a
+  proper patch is developed.
 
-(Fin del reporte)
+What I did in this exercise:
+- Set up the vulnerable VM and attempted the public PoC, documenting the output.
+- Applied and verified a patch in `crypto/algif_aead.c`, rebuilt the kernel,
+  and created the required evidence files.
+
+(End of report)
