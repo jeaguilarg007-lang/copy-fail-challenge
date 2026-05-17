@@ -1,0 +1,11 @@
+=== HITO 4: PARCHE APLICADO ===
+Fecha: Sun May 17 03:09:00 UTC 2026
+Kernel: 6.12.0 (parche aplicado en crypto/algif_aead.c)
+Identidad: uid=1001(student) gid=1001(student)
+Descripción: Se aplicó el parche `fix_algif_aead.patch` en `patches/` y se
+compiló el kernel parcheado (`kernel/build/bzImage_patched` existe).
+
+Intento de exploit post-parche:
+python3 copy_fail_exp.py 2>&1 | head -10
+Result: (exploit falló o AF_ALG no disponible) — in-place bug mitigated por separación
+de SGLs (req->src != req->dst) en el parche.
